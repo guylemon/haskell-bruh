@@ -39,6 +39,14 @@ https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-on-macos-d2cc1ce9f
 
 [Tuples](#tuples)
 
+[Function Syntax](#function-syntax)
+
+* [Pattern Matching](#pattern-matching)
+* [Guards](#guards)
+* [Where](#where)
+* [Let](#let)
+* [Case](#case)
+
 [Miscellaneous](#miscellaneous)
 
 ### `ghci`
@@ -59,6 +67,18 @@ REPL. <br>
 | `^C ^C`                     | `:q`                    | Exit the REPL                                        |
 | N/A                         | `:t <expression>`       | display `type` of an expression                      |
 | N/A                         | `:t (<infix function>)` | display `type` of an infix function, e.g., `:t (==)` |
+| N/A                         | `:set +m`               | enable multiline input\*                             |
+
+\*It is also possible to enable multiline input on a case by case basis. Simply
+enter the command `:{`, enter the multiline input, and then enter the command
+`:}` when finished.
+
+```haskell
+> :{   -- begin multiline input
+> multi
+> line
+> :}   -- end multiline input
+```
 
 <br>
 
@@ -291,6 +311,19 @@ In haskell, a string is sugar for `[Char]`, an array of Unicode `char`acters.
 "foo"
 ```
 
+**Ways to refer to lists**
+
+```haskell
+-- empty list
+[]
+
+-- singleton list
+[a]
+
+-- list
+[a, b, c, ..n]
+```
+
 ## List operations
 
 _For some JS comparisons, I'm showing the
@@ -476,6 +509,129 @@ zip [1,2,3,4] ["Apples", "Oranges", "Pears"]
 -- [(1, "Apples"), (2, "Oranges"), (3, "Pears")]
 ```
 
+# Function Syntax
+
+## Pattern Matching
+
+Pattern matching allows us to setup a default response for a function when we
+have a known case. **Visually**, it looks almost like a function overload in
+TypeScript.
+
+The function below checks to see if the argument is `1` or not. If it is one, it
+returns "It's one!". Any other value `x` returns "Not one...".
+
+```haskell
+isItOne :: (Eq a, Num a) => a -> String
+isItOne 1 = "It's one!"
+isItOne x = "Not one..."
+```
+
+**non-exhaustive pattern**
+
+A pattern that has no default case. Don't do this :-)
+
+```haskell
+isItOne :: (Eq a, Num a) => a -> String
+isItOne 1 = "It's one!"
+isItOne 2 = "Not one..."
+
+isItOne 3   -- ERROR! there isn't a default case for isItOne.
+```
+
+**pattern matching with tuples**
+
+Note the use of `_` below. It indicates to the compiler that the variable should
+be ignored.
+
+```haskell
+first :: (a, b, c) -> a
+first (x, _, _) = x
+```
+
+**pattern matching with lists**
+
+We can do something similar to the 'rest / spread' pattern in javascript for
+destructuring a list in a function argument.
+
+```javascript
+const [first, ...rest] = [1, 2, 3];
+
+first; // 1
+rest; // [2,3]
+```
+
+```haskell
+destructure :: [t] -> t
+destructure (first:second:rest) = second
+
+destructure [1,2,3]   -- 2
+```
+
+**'as' pattern**
+
+Denoted with `@`, and can be used to bind a variable that represents the
+entirety of a pattern. For example:
+
+```haskell
+@xs(x:rest)
+-- refer to an entire list as `xs`, refer to the first item in the list as `x`, and the remaining items as `rest`
+```
+
+## Guards
+
+Guards are a way to avoid huge `if` statements by using the `|` character. There
+is a syntactic 'gotcha' here- When defining a function using guards, don't use
+`=`!
+
+During execution, the function will look for the first statement that evaluates
+to `True`, executes the code to the right of the `=`, and exits the function.
+
+```haskell
+-- DO
+foo :: Eq t => [t] -> [Char]
+foo x
+  | x == [] = "It's an empty array"
+  | otherwise = "It's not an empty array"
+
+foo [True]   -- "It's not an empty array"
+foo []   -- "It's an empty array"
+
+
+-- DON'T
+foo :: Eq t => [t] -> [Char]
+foo x =
+  | x == [] = "It's an empty array"
+  | otherwise = "It's not an empty array"
+```
+
+## Where
+
+`where` is used to bind variables to a function scope **after** the body of the
+function.
+
+```haskell
+<function> where <assignments>
+```
+
+## Let
+
+`let` is used to bind variables to a function scope **before** the body of the
+function. When `let` is used without its `in` counterpart, the variables are
+global.
+
+```haskell
+let <assignments> in <function>
+```
+
+## Case
+
+```haskell
+case expression of pattern -> result
+                   pattern -> result
+```
+
+<br>
+
 # Miscellaneous
 
 ## Syntax
@@ -521,9 +677,6 @@ foo something = if something
                 else 2
 ```
 
-### The `let` keyword
+### Defining a function with backticks as an infix
 
-`let` can be used to define a name inside of `ghci`.
-
-In a module, there is a different use for `let` which I do not know yet, but
-will get there soon.
+* TODO
