@@ -10,6 +10,20 @@ https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-on-macos-d2cc1ce9f
 
 # Notes
 
+[REPL](#ghci)
+
+[Primitives](#primitives)
+
+[Lists](#lists)
+
+* [List operations](#list-operations)
+* [Ranges](#ranges)
+* [List Comprehension](#list-comprehension)
+
+[Tuples](#tuples)
+
+[Miscellaneous](#miscellaneous)
+
 ### `ghci`
 
 GHC (Glasgow Haskell Compiler) is what compiles our haskell code. In the same
@@ -77,7 +91,7 @@ hope it will serve well enough to get the point across.
 >
 > <br>
 
-# Lists (Arrays)
+# Lists
 
 Lists in haskell are different from javascript in that they are _typed_, meaning
 that there can be no lists of a _mixed_ type.
@@ -284,7 +298,7 @@ zip [1,2,3,4] ["Apples", "Oranges", "Pears"]
 -- [(1, "Apples"), (2, "Oranges"), (3, "Pears")]
 ```
 
-# Syntax / Miscellaneous
+# Miscellaneous
 
 ## Syntax
 
