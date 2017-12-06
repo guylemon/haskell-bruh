@@ -12,13 +12,30 @@ https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-on-macos-d2cc1ce9f
 
 [REPL](#ghci)
 
-[Primitives](#primitives)
+[Types](#basic-types)
+
+* [Booleans](#booleans)
+* [Chars](#chars)
+* [Functions](#functions)
+* [Numbers](#numbers)
+* [Ordering](#ordering)
+
+[Type Classes](#type-classes)
+
+* [Bounded](#bounded)
+* [Enum](#enum)
+* [Floating](#floating)
+* [Integral](#integral)
+* [Num](#num)
+* [Ord](#ord)
+* [Read](#read)
+* [Show](#show)
 
 [Lists](#lists)
 
+* [List Comprehension](#list-comprehension)
 * [List operations](#list-operations)
 * [Ranges](#ranges)
-* [List Comprehension](#list-comprehension)
 
 [Tuples](#tuples)
 
@@ -35,24 +52,25 @@ REPL, we can use `ghci` to run a haskell REPL. Because we are setup using
 commands bear more relation to commands used in the VIM editor than in the node
 REPL. <br>
 
-| Node                        | Haskell                | _description_                                        |
-| --------------------------- | ---------------------- | ---------------------------------------------------- |
-| `require('path/to/module')` | `:l path/to/module.hs` | load a module's functions into scope                 |
-| _none I know of_            | `:r`                   | refresh loaded modules after a file has been changed |
-| `^C ^C`                     | `:q`                   | Exit the REPL                                        |
+| Node                        | Haskell                 | _description_                                        |
+| --------------------------- | ----------------------- | ---------------------------------------------------- |
+| `require('path/to/module')` | `:l path/to/module.hs`  | load a module's functions into scope                 |
+| _none I know of_            | `:r`                    | refresh loaded modules after a file has been changed |
+| `^C ^C`                     | `:q`                    | Exit the REPL                                        |
+| N/A                         | `:t <expression>`       | display `type` of an expression                      |
+| N/A                         | `:t (<infix function>)` | display `type` of an infix function, e.g., `:t (==)` |
 
 <br>
 
 ---
 
-# Primitives
+# Basic Types
 
 This section refers to the basic types (boolean, number, string, function).
-_Primitive Types_ in this context may be a bit of a technical misnomer because
-of differences between javascript and haskell that I don't yet understand, but I
-hope it will serve well enough to get the point across.
 
 ## Booleans
+
+`:: Bool`
 
 | JS              | Haskell         | _notes_ |
 | --------------- | --------------- | ------- |
@@ -61,10 +79,38 @@ hope it will serve well enough to get the point across.
 
 ## Numbers
 
-| JS               | Haskell   | _notes_          |
-| ---------------- | --------- | ---------------- |
-| `++x`            | `succ x`  | successor method |
-| `Math.min(x, y)` | `min x y` |
+In javascript, we can be very loose with our definition of what a `Number` is.
+However, in haskell we need to be more specific. There are four types of numbers
+in Haskell:
+
+| Type      | _notes_                                                            |
+| --------- | ------------------------------------------------------------------ |
+| `Int`     | a **bounded**, whole number (has a size limit, can't be a decimal) |
+| `Integer` | an **unbounded** whole number (can be huge! but not a decimal)     |
+| `Float`   | a **single precision** floating point number (decimal)             |
+| `Double`  | double the precision of a float                                    |
+
+**Number methods**
+
+| JS               | Haskell        | _notes_                                                  |
+| ---------------- | -------------- | -------------------------------------------------------- |
+| `++x`            | `succ x`       | successor method                                         |
+| `Math.min(x, y)` | `min x y`      |
+| N/A              | `fromIntegral` | used to make different number types play nicely together |
+
+## Chars
+
+A single character. This is denoted by single quotes, e.g., `'a'`. A `string` in
+Haskell has the type `[Char]` - a list of single characters.
+
+> An important distinction syntactically is that `"a"` is a `list` containing a
+> single character. So `["a", "b"]` would have the type `[[Char]]` -- a list of
+> character lists.
+
+## Ordering
+
+One of `GT`, `LT`, `EQ`. Used to signify _greater than_, _less than_, and
+_equal_
 
 ## Functions
 
@@ -88,8 +134,138 @@ hope it will serve well enough to get the point across.
 > div 92 10 -- is same as
 > 92 `div` 10
 > ```
+
+**Function type declarations**
+
+`<functionName> :: <arg type> -> <return type>`
+
+```haskell
+fn :: Int -> Int -- this function takes and returns an `Int`
+```
+
+_Type variables_<br> `<functionName> :: <Type variable t, Type variable u> => t
+-> u`
+
+> If there are more than one type variables in a signature **without** an
+> assigned type class, it does **not** mean that the two variables must be of a
+> different type!
+
+```haskell
+-- a function type declaration can have one or more type variables.
+fn :: Int a => a -> a -- `a` is an Int
+
+fn :: (Int a, [Char] b) => a -> b -- this function takes a number and returns a string.
+
+fn :: [a] -> a -- take a list of any type, and return that type.
+```
+
+**Reading a type signature**
+
+> ```haskell
+> -- 'where every `a` following the fat arrow is of type `Integral`, this function takes two Integrals and will return an Integral.'
+> divide :: Integral a => a -> a -> a
+> divide x y = x `div` y
+> ```
+
+ <br>
+
+# Type Classes
+
+Type classes are a set of types that **implement** a set of functionality unique
+to the type class.
+
+## `Eq`
+
+A set of types that can be tested for equality.
+
+`:: Eq a => a -> a -> Bool`
+
+```haskell
+== -- Equal
+
+/= -- Not equal
+```
+
+## `Ord`
+
+A set of types that can be put in order. Because they can be put in order, they
+necessarily can be compared with each other.
+
+```haskell
+-- The following infix operators have the same type
+:: Ord a => a -> a -> Bool
 >
-> <br>
+<
+>=
+<=
+
+-- The compare function returns one of "GT", "LT", "EQ" (greater than, less than, equal to)
+compare :: Ord a => a -> a -> Ordering
+
+compare 3 4   -- LT
+```
+
+## `Show`
+
+A set of types that can be represented as strings.
+
+```haskell
+-- print a string version of a given type
+show :: Show a => a -> String
+show 4   -- "4"
+```
+
+## `Read`
+
+A set of types that can be coerced from a `String`
+
+```haskell
+-- convert a String to an inferred type (requires another operation for inference!)
+read :: Read a => String -> a
+
+read "4" + 3   -- 7
+
+-- convert a String to a specified type
+read "4" :: Float   -- 4.0
+```
+
+## `Num`
+
+Encompasses all numeric types.
+
+## `Floating`
+
+Only floating point numbers (`Float`, `Double`)
+
+## `Integral`
+
+Only whole numbers (`Int`, `Integer`)
+
+## `Enum`
+
+A set of types that can be sequentially ordered
+
+```haskell
+succ :: Enum a => a -> a
+succ 1   -- 2
+
+pred :: Enum a => a -> a
+pred 1   -- 0
+```
+
+## `Bounded`
+
+A set of types which have an upper and lower bound.
+
+```haskell
+minBound :: Bounded a => a
+minBound :: Bool   -- False
+
+maxBound :: Bounded a => a
+maxBound :: Int   -- 9223372036854775807
+```
+
+<br>
 
 # Lists
 
@@ -111,7 +287,7 @@ const b = [1, true, 'asdf']; // Also OK
 In haskell, a string is sugar for `[Char]`, an array of Unicode `char`acters.
 
 ```haskell
-["f", "o", "o"]
+['f', 'o', 'o']
 "foo"
 ```
 
@@ -256,11 +432,13 @@ right? Well, maybe not but it should be handy.
 
 # Tuples
 
+`:: (t1, t2, tn)`
+
 Tuples are a way to express a group of values with a fixed _size_, when the
 _type_ of each value is also known. Tuples are grouped with parentheses, and can
-contain mixed types, unlike a list. For instance, `(1, 2)` is a `number` tuple,
-and `("Guy", 2)` is a tuple with a `string` as its first member, and a `number`
-as its second member.
+contain mixed types, unlike a list. For instance, `(1, 2)` is an `Integral`
+tuple (`(Integral, Integral)`), and `("Guy", 2)` is a tuple with a `string` as
+its first member, and an `Integral` as its second member (`:: ([Char], Int)`).
 
 A list of tuples must consist of the same `type` and `size`.
 
@@ -303,8 +481,10 @@ zip [1,2,3,4] ["Apples", "Oranges", "Pears"]
 ## Syntax
 
 The apostrophe `'` has no special meaning in Haskell, and can be used in
-variable and function names. _There are some notable exceptions -- see the
-`censor` example in list comprehensions._
+variable and function names. _There are, however, some notable exceptions:_
+
+* `'a'` represents a single `Char`.
+* `"a"` is a list containing a single Char (`['a']`)
 
 **Comments**
 
