@@ -47,6 +47,8 @@ https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-on-macos-d2cc1ce9f
 * [Let](#let)
 * [Case](#case)
 
+[Recursion](#recursion)
+
 [Miscellaneous](#miscellaneous)
 
 ### `ghci`
@@ -115,7 +117,8 @@ in Haskell:
 | JS               | Haskell        | _notes_                                                  |
 | ---------------- | -------------- | -------------------------------------------------------- |
 | `++x`            | `succ x`       | successor method                                         |
-| `Math.min(x, y)` | `min x y`      |
+| `%`              | `mod`          | modulo method                                            |
+| `Math.min(x, y)` | `min x y`      |                                                          |
 | N/A              | `fromIntegral` | used to make different number types play nicely together |
 
 ## Chars
@@ -617,10 +620,19 @@ function.
 
 `let` is used to bind variables to a function scope **before** the body of the
 function. When `let` is used without its `in` counterpart, the variables are
-global.
+global. In the quicksort example below, we are binding two variables in the let
+block, `smalls`, and `bigs` to a list comprehension. Those two variables are
+then used in the `in` block.
 
 ```haskell
-let <assignments> in <function>
+-- let <assignments> in <function>
+
+quicksort :: (Ord a ) => [a] -> [a]
+quicksort [] = []
+quicksort (x:xs) =
+    let smalls = [a | a <- xs, a < x];
+        bigs = [b | b <-xs, b > x];
+    in quicksort smalls ++ [x] ++ quicksort bigs
 ```
 
 ## Case
@@ -628,6 +640,250 @@ let <assignments> in <function>
 ```haskell
 case expression of pattern -> result
                    pattern -> result
+```
+
+<br>
+
+# Recursion
+
+One notable aspect of using a functional programming language is a lack of
+looping constructs, like the `for` loop, which exist in several languages. This
+being the case, we use recursion instead of loops in haskell. For a simple
+example, I grabbed a common problem: Solving for the greatest common divisor.
+
+As we can see in the [guards section](#guards) above, haskell gives us some
+nice, clean looking syntax for outlining cases where we want to stop the
+recursion.
+
+```haskell
+-- recursively implement the gcd infix (greatest common divisor)
+-- optimization with modulo at http://people.cs.ksu.edu/~schmidt/301s12/Exercises/euclid_alg.html
+
+gcd' :: (Integral a) => a -> a -> a
+gcd' x y
+    | x == 0 || y == 0 = max x y
+    | x == y = x
+    | x > y = gcd' (x `mod` y) y
+    | otherwise = gcd' (y `mod` x) x
+```
+
+Below is a similar implementation in javascript. A few items came to mind while
+I was writing this example:
+
+1. I realized I would need to include runtime typechecking
+2. While it would be possible to make all three cases into a big ternary to try
+   and emulate the terse nature of haskell, it would lose a lot of readability.
+   I certainly would not want to come back in two months and look at
+   ```javascript
+   return x === 0 || y === 0 ? max : x === y ? x : gcd(max % min, min);
+   ```
+3. Even though it can be a little more verbose, we can borrow techniques from
+   haskell and bring them into our javascript code.
+
+```javascript
+function gcd(x, y) {
+  // would also need to include runtime typechecking, which I've omitted.
+
+  const max = Math.max(x, y);
+  const min = Math.min(x, y);
+
+  if (x === 0 || y === 0) {
+    return max;
+  }
+
+  if (x === y) {
+    return x;
+  }
+
+  return gcd(max % min, min);
+}
+```
+
+Here's a little collection of examples in haskell and javascript to showcase
+recursion.
+
+**maximum of a list**
+
+In this example, we are able to take advantage of the `:` operator to
+destructure our list, and also handling empty and singleton cases with
+[pattern matching](#pattern-matching).
+
+```haskell
+-- The maximum of a list is the head if the head is bigger than the maximum of the tail.
+maxOfList' :: Ord a => [a] -> a
+maxOfList' [] = error "dude, where's my list?"
+maxOfList' [x] = x
+maxOfList' (x:xs) = max x (maxOfList' xs)
+```
+
+Javascript:
+
+```javascript
+function maxOfList(xs) {
+  // runtime type-checking here...
+  if (xs.length === 0) {
+    throw new Error("dude, where's my list?");
+  }
+
+  if (xs.length === 1) {
+    return xs[0];
+  }
+
+  const [x, ...rest] = xs;
+
+  return Math.max(x, maxOfList(rest));
+}
+```
+
+**replicate**
+
+Given a length L and an item, create a list of length L containing that item.
+
+```haskell
+replicate' :: Int -> a -> [a]
+replicate' l item
+    | l <= 0 = []
+    | otherwise = item : replicate' (l - 1) item
+```
+
+Javascript:
+
+```javascript
+function replicate(length, item) {
+  // runtime typechecking here...
+  if (length <= 0 || item === undefined) {
+    return [];
+  }
+
+  return [item, ...replicate(length - 1, item)];
+}
+```
+
+**take**
+
+Take a specified number of elements from the front of a list, and put them in a
+new list.
+
+```haskell
+take' :: Int -> [a] -> [a]
+take' _ [] = []
+take' n (x:xs)
+    | n <= 0 = []
+    | otherwise = x : take' ( n - 1 ) xs
+```
+
+Javascript:
+
+```javascript
+function take(num, list) {
+  // again... type-checking would go here
+  if (list.length === 0 || num <= 0) {
+    return [];
+  }
+
+  const [x, ...xs] = list;
+
+  return [x, ...take(num - 1, xs)];
+}
+```
+
+**reverse**
+
+Reverse a list
+
+```haskell
+reverse' :: [a] -> [a]
+reverse' [] = []
+reverse' (x:xs) = reverse' xs ++ [x]
+```
+
+Javascript:
+
+```javascript
+function reverse(list = []) {
+  const [x, ...xs] = list;
+
+  if (list.length === 0) {
+    return [];
+  }
+
+  return [...reverse(xs), x];
+}
+```
+
+**zip**
+
+```haskell
+zip' :: [a] -> [b] -> [(a,b)]
+zip' [] _ = []
+zip' _ [] = []
+zip' (x:xs) (y:ys) = (x, y) : zip' xs ys
+```
+
+Javascript:
+
+```javascript
+function zip(list1, list2) {
+  if (list1.length === 0 || list2.length === 0) {
+    return [];
+  }
+  const [a, ...as] = list1;
+  const [b, ...bs] = list2;
+
+  return [[a, b], ...zip(as, bs)];
+}
+```
+
+**elem**
+
+```haskell
+elem' :: ( Eq a ) => a -> [a] -> Bool
+elem' _ [] = False
+el `elem'` (x:xs)
+    | x == el = True
+    | otherwise = el `elem'` xs
+```
+
+Javascript:
+
+```javascript
+function elem(el, list = []) {
+  if (list.length === 0) {
+    return false;
+  }
+
+  const [x, ...xs] = list;
+  return x === el ? true : elem(el, xs);
+}
+```
+
+**quicksort**
+
+```haskell
+quicksort :: (Ord a ) => [a] -> [a]
+quicksort [] = []
+quicksort (x:xs) =
+    let smalls = [a | a <- xs, a < x];
+        bigs = [b | b <-xs, b > x];
+    in quicksort smalls ++ [x] ++ quicksort bigs
+```
+
+Javascript:
+
+```javascript
+function quicksort(list = []) {
+  if (list.length === 0) {
+    return list;
+  }
+
+  const [x, ...xs] = list;
+  const smalls = xs.filter(a => a < x);
+  const bigs = xs.filter(a => a > x);
+
+  return quicksort(smalls)
+    .concat(x)
+    .concat(quicksort(bigs));
+}
 ```
 
 <br>
