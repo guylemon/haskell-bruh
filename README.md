@@ -6,7 +6,18 @@ _Notes on beginning haskell from the point of view of a javascript programmer_
 
 _VsCode setup article:
 https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-on-macos-d2cc1ce9f60a_
-<br>_Haskell Tutorial: http://learnyouahaskell.com/_
+
+_Haskell Tutorial: http://learnyouahaskell.com/_
+
+_Partial Application_: https://en.wikipedia.org/wiki/Partial_application
+
+_Currying_: https://en.wikipedia.org/wiki/Currying
+
+_Higher order Function_: https://en.wikipedia.org/wiki/Higher-order_function
+
+[_Interesting idea for implementing an infix composition function in javascript_](https://stackoverflow.com/questions/12350790/is-it-possible-to-define-an-infix-function)
+
+[_Infinite sequences using generators_](https://timtaubert.de/blog/2013/05/working-with-infinite-sequences-in-javascript/)
 
 # Notes
 
@@ -46,8 +57,15 @@ https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-on-macos-d2cc1ce9f
 * [Where](#where)
 * [Let](#let)
 * [Case](#case)
+* [Sectioning](#sectioning)
+* [Application](#application)
+* [Composition](#composition)
 
 [Recursion](#recursion)
+
+[Folding](#folding)
+
+[Scanning](#scanning)
 
 [Miscellaneous](#miscellaneous)
 
@@ -137,6 +155,11 @@ _equal_
 
 ## Functions
 
+Functions in haskell are **higher order**. A higher order function is a function that either:
+
+1. Can take a function as an argument, or
+2. Return a function as its return value.
+
 | JS                          | Haskell            | _notes_                                 |
 | --------------------------- | ------------------ | --------------------------------------- |
 | `const double = x => x + x` | `double x = x + x` | define a function                       |
@@ -158,7 +181,30 @@ _equal_
 > 92 `div` 10
 > ```
 
-**Function type declarations**
+### Defining a function with infix syntax
+
+In haskell, it is also possible to define a binary (taking two arguments) function using infix notation. As an example, let's make an addition function:
+
+```haskell
+plus x y = x + y
+```
+
+We can invoke this as an `infix` function, like so:
+
+```haskell
+3 `plus` 4   -- 7
+```
+
+Additionally (pun intended), we can **define** the function using infix notation!
+
+```haskell
+x `plus` y = x + y
+
+plus 3 4   -- 7
+3 `plus` 4   -- 7
+```
+
+**Function type definitions**
 
 `<functionName> :: <arg type> -> <return type>`
 
@@ -166,8 +212,7 @@ _equal_
 fn :: Int -> Int -- this function takes and returns an `Int`
 ```
 
-_Type variables_<br> `<functionName> :: <Type variable t, Type variable u> => t
--> u`
+_Type variables_<br> `<functionName> :: <Type variable t, Type variable u> => t -> u`
 
 > If there are more than one type variables in a signature **without** an
 > assigned type class, it does **not** mean that the two variables must be of a
@@ -191,6 +236,195 @@ fn :: [a] -> a -- take a list of any type, and return that type.
 > ```
 
  <br>
+
+#### Currying and Partial Application
+
+Functions that take more than one argument in haskell are said to be **curried**, that is, if they are not recieving the final argument, they return a **partially applied** function that takes the next argument, with the preceding arguments bound, and returns a function with smaller **arity**.
+
+TODO: explain it like I'm five.
+
+Examples of higher order functions:
+
+**zipWith**
+
+`zipWith'` combines two lists using a provided function. (zipWith is higher order because it takes a function as an argument)
+
+```haskell
+zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith' _ [] _ = []
+zipWith' _ _ [] = []
+zipWith' fn (x:xs) (y:ys) = fn x y : zipWith' fn xs ys
+
+zipWith' (+) [1,2,3] [1,2,3]  -- [2,4,6]
+```
+
+Javascript:
+
+```javascript
+const add = (a, b) => a + b;
+function zipWith(fn = (a, b) => a, list1 = [], list2 = []) {
+  if (list1.length === 0 || list2.length === 0) {
+    return [];
+  }
+  const [x, ...xs] = list1;
+  const [y, ...ys] = list2;
+
+  return [fn(x, y), ...zipWith(fn, xs, ys)];
+}
+
+zipWith(add, [1, 2, 3], [1, 2, 3]); // [2,4,6]
+```
+
+**map**
+
+`map` takes a function and applies it to a list. Guess what? `map` is higher order, because it takes a function as an argument. We can define map recursively:
+
+```haskell
+map' :: (a -> b) -> [a] -> [b]
+map' _ [] = []
+map' fn (x:xs) = fn x : map fn xs
+
+map' (*2) [1, 2, 3]  -- [2, 4, 6]
+```
+
+Javascript:
+
+```javascript
+function map(fn, list = []) {
+  if (list.length === 0) {
+    return [];
+  }
+
+  const [x, ...xs] = list;
+
+  return [fn(x), ...map(fn, xs)];
+}
+
+map(a => a * 2, [1, 2, 3]); // [2,4,6]
+```
+
+**filter**
+
+`filter` takes a predicate (a function that returns true or false), and a list as its arguments. It returns a new list with the elements that satisfy the predicate (return true when passed into the predicate function). Notice that in the haskell example, we use [sectioning](#sectioning) to eliminate boilerplate for our predicate!
+
+```haskell
+filter' :: (a -> Bool) -> [a] -> [a]
+filter' _ [] = []
+filter' fn (x:xs)
+  | fn x = x : filter' fn xs
+  | otherwise = filter' fn xs
+
+filter' (/= 2) [3, 2, 2, 3]   -- [3,3]
+```
+
+Javascript:
+
+```javascript
+function filter(fn, list = []) {
+  if (list.length === 0) {
+    return [];
+  }
+  const [x, ...xs] = list;
+
+  return fn(x) ? [x, ...filter(fn, xs)] : filter(fn, xs);
+}
+
+filter(a => a !== 2, [3, 2, 2, 3]); // [3,3]
+```
+
+**largest multiple of 3829 under 100,000**
+This problem introduces ways that we can use infinite sequences to our advantage in haskell.
+
+```haskell
+biggestMultiple' limit divisor = head $ filter p [limit, (limit - 1)..]
+  where p x = x `mod` divisor == 0
+
+biggestMultiple' 100000 3829   -- 99554
+```
+
+Javascript:
+In javascript, we don't have lazy sequences baked in to the language, so we can use recursion to create our sequence for us.
+
+```javascript
+function biggestMultiple(limit, divisor) {
+  if (limit <= 1 || divisor > limit) {
+    return 1;
+  }
+
+  return limit % divisor === 0 ? limit : biggestMultiple(limit - 1, divisor);
+}
+
+biggestMultiple(100000, 3829); // 99554
+```
+
+**sum of all odd squares under a limit**
+
+```haskell
+sumOfOddSquares' :: Integral a => a -> a
+sumOfOddSquares' limit = sum $ takeWhile (<limit) $ filter odd $ map (^2) [1..]
+```
+
+Javascript:
+**CAVEAT** There is no longer any support for tail-call optimization for recursive calls in the v8 runtime (as of at least December 2017). Written recursively, this implementation has an upper limit at which there WILL be a stack overflow. However, 10,000 is ok for this case.
+
+```javascript
+function sumOfOddSquares(limit = 1, sum = 0, counter = 1) {
+  const square = Math.pow(counter, 2);
+  if (square > limit) {
+    return sum;
+  }
+
+  const newSum = square % 2 !== 0 ? sum + square : sum;
+
+  return sumOfOddSquares(limit, newSum, counter + 1);
+}
+```
+
+**number of [Collatz sequences](https://en.wikipedia.org/wiki/Collatz_conjecture) above a certain length**
+
+Of the sequences generated from a seed between 1 and 100, how many sequences have a length greater than `n`?
+
+```haskell
+  getCollatz :: Integral a => a -> [a]
+  getCollatz n
+    | n == 1 = [1]
+    | odd n = n:getCollatz (n * 3 + 1)
+    | otherwise = n: getCollatz (n `div` 2)
+
+  bigCollatz :: Int
+  bigCollatz limit = length $ filter (\x -> length x > limit) $ map getCollatz [1..100]
+  bigCollatz 15  -- 66
+```
+
+Javascript:
+
+```javascript
+function getCollatz(n = 1) {
+  if (n === 1) {
+    return [1];
+  }
+
+  if (n % 2 !== 0) {
+    return [n, ...getCollatz(n * 3 + 1)];
+  }
+
+  return [n, ...getCollatz(n / 2)];
+}
+
+function getBigCollatzes(minSize, seedLimit, acc = []) {
+  if (seedLimit <= 1) {
+    return acc.length;
+  }
+
+  const collatz = getCollatz(seedLimit);
+
+  return collatz.length > minSize
+    ? getBigCollatzes(minSize, seedLimit - 1, [...acc, collatz])
+    : getBigCollatzes(minSize, seedLimit - 1, acc);
+}
+
+getBigCollatzes(15, 100); // 66
+```
 
 # Type Classes
 
@@ -362,7 +596,7 @@ syntax. This is something that would be amazing were it a built in feature of
 javascript, but in reality requires some backflips in the form of custom
 iterators to achieve. Because this is the case, I won't list any JS analogs here
 besides noting that `Ramda.range(start, finish)` gives an approximation of this
-behavior, but does not support complex sequences.
+behavior, but does not support complex sequences. For infinite or more complex ranges, we can use generators. [See here](#infinite-sequences)
 
 **Finite Ranges**
 
@@ -580,6 +814,33 @@ entirety of a pattern. For example:
 -- refer to an entire list as `xs`, refer to the first item in the list as `x`, and the remaining items as `rest`
 ```
 
+#### Lambda functions
+
+In javascript, we are all familiar with lambdas, we simply know them as anonymous functions. The lamda function in haskell is notated like this:
+
+```haskell
+-- take an `x`, and add 1.
+(\x -> x + 1)
+```
+
+We can use these in situations where it does not make sense to name and re-use the function later. Mapping over a list is often a good spot for this:
+
+```haskell
+incList xs = map (\x -> x + 1) xs
+
+incList [1,2,3]   -- [2,3,4]
+```
+
+Javascript:
+
+```javascript
+function incList(list) {
+  return list.map(x => x + 1);
+}
+
+incList([1, 2, 3]); // [2,3,4]
+```
+
 ## Guards
 
 Guards are a way to avoid huge `if` statements by using the `|` character. There
@@ -643,6 +904,98 @@ case expression of pattern -> result
 ```
 
 <br>
+
+## Sectioning
+
+Speaking of partial application, we can partially apply `infix` functions like `+` or `/` using **sectioning**. All this boils down to is using some parentheses. For example, let's think of a function we'll call `addTen`. This could be written:
+
+```haskell
+addTen x = x + 10
+
+addTen 5   -- 15
+```
+
+Looking at that function, do we _really_ need the argument `x`? We can actually strip that out, because **`+`** is a function that can be partially applied!
+
+```haskell
+addTen = (+10)
+
+addTen 5   -- 15
+```
+
+In case you were wondering, as I did: You can reverse the argument order when sectioning an infix:
+
+```haskell
+addTen = (10+)
+
+addTen 5   -- 15
+```
+
+## Application
+
+_AKA, `$`_
+
+In haskell, we use spaces to provide arguments to functions, but what happens when we can't just use a space? Typically, we use parentheses for grouping, like so:
+
+```haskell
+length $ takeWhile (< 1000) (scanl1 (+) (map (^2) [1..]))
+```
+
+Yuck! We can clean this up using the `$` function. `$` tells the compiler to evaluate what is on the right hand side BEFORE it uses the result as an argument. In the example below, if we were to remove the final `$`, it would be akin to calling `scanl` with `(+)` and `map`, which is not what we are going for. So, when reading the example below, we read it from the bottom up. We are creating a list, scanning it with `(+)`, and stopping the list creation when whatever we are summing is greater than 1000. Finally, we take the length of that resulting list.
+
+```haskell
+length
+  $ takeWhile (< 1000)
+  $ scanl1 (+)
+  $ map (^2) [1..]
+```
+
+## Composition
+
+_AKA, `.`_
+
+Ah, functional composition. It's wonderful! In JavaScript, we can also do this using a bunch of nested parentheses, or with utility functions like `Ramda.compose`. In haskell, we use the `.` function. The function aligns exactly with the mathematical definition:
+
+```
+(f • g)(x) = f(g(x))
+```
+
+The composition of the functions results in a function that, when executed with an argument, is equivalent to the result of the first function being executed with the result of the second function being executed with the argument. And, on and on it can go... TODO: reword this definition for clarity
+
+Let's take an example where we map over an array of integers, and for each integer, we `+ 2` and `* 3`. We could write it like so:
+
+```haskell
+f' = map (+2) $ map (*3)
+
+f' [1,2,3]   -- [9, 12, 15]
+```
+
+Or in Javascript:
+
+```javascript
+function f(list) {
+  return list.map(add2).map(mult3);
+}
+```
+
+Notice that we are iterating over a list twice, when in fact, we can get the same result by **composing** our transformation functions:
+
+```haskell
+f' = map ((*3) . (+2))
+
+-- We can clean this up using the application function:
+f' = map $ (*3) . (+2)
+
+f' [1,2,3]   -- [9, 12, 15]
+```
+
+Javascript:
+
+```javascript
+function f(list) {
+  return list.map(compose(mult3, add2));
+}
+```
 
 # Recursion
 
@@ -888,6 +1241,281 @@ function quicksort(list = []) {
 
 <br>
 
+# Folding
+
+Folding in haskell is much akin to the concept of `reduce` for javascript arrays, but without some of the extra bells and whistles. For a fold in Haskell, we take a binary function (taking two arguments), an accumulator, and finally the list itself. The binary function provides as its first argument the current value of the accumulator, and the second argument is the current element in the list.
+
+There are two flavors of folding in haskell: `foldl` (folding in a direction given a binary function and an accumulator, and later, a list), and `foldl1` (folding in a direction with the first element assigned as the initial value for the accumulator. This type can be called with just the binary, and later, the list.)
+
+_In javascript, `Array.reduce` acts like `foldl1` unless it is given an initial value to use as an accumulator._
+
+## Left folds
+
+**Implementing `product` with `foldl`**
+
+`foldl` is a left fold. All this means is that we are traversing the list from left to right while we accumulate.
+
+```haskell
+product' :: (Int a) => [a] -> a
+product' list = foldl (*) 1 list
+
+product' [1,2,3]   -- 6
+```
+
+Javascript:
+
+```javascript
+function product(list = []) {
+  return list.reduce((a, b) => a * b, 1);
+}
+
+product([1, 2, 3]); // 6
+```
+
+## Right folds
+
+Right folds operate like a left fold, which the exception being that they begin their operations from the **right hand** side of a list, and move toward the beginning.
+
+TODO: _In haskell, the arguments for the binary accumulating function are also reversed, which does not show any immediate benefit to me at present. Is there a non-semantic reason for this?_
+
+**implement `map` with a right fold**
+
+Using a right fold to implement map in haskell is useful because we can take advantage of the `:` infix, which is more performant than the `++` infix (practically speaking, for really long lists). See below:
+
+Using right fold: (note the use of `:` here, because we are starting at the end of the list)
+
+```haskell
+map' :: Foldable t => (t1 -> a) -> t t1 -> [a]
+map' f = foldr (\x acc -> f x : acc) []
+
+map' (+2) [1,2,3]  -- [3.4.5]
+```
+
+Using left fold: (note that since we start at the beginning, we are forced to use `++` to build our list)
+
+```haskell
+map' :: Foldable t => (t1 -> a) -> t t1 -> [a]
+map' f = foldl (\acc x ->  acc ++ [f x]) []
+
+map' (+2) [1,2,3]  -- [3.4.5]
+```
+
+Javascript (right fold):
+
+```javascript
+function map(fn) {
+  return (list = []) => list.reduceRight(fn, []);
+}
+
+const add2Fold = (a, b) => [b + 2].concat(a);
+
+map(add2Fold)([1, 2, 3]); // [3,4,5]
+```
+
+## Using folds
+
+Here's a little collection of examples using folds to implement some standard built-in functions:
+
+**maximum**
+
+```haskell
+maximum' :: (Ord a, Num a) => [a] -> a
+maximum'= foldl1 (\a x -> if a > x then a else x)
+```
+
+Javascript:
+
+```javascript
+function maximum(list) {
+  return list.reduce((a, b) => (a > b ? a : b));
+}
+```
+
+**reverse**
+
+```haskell
+reverse' :: [a] -> [a]
+-- Here is where the `flip` function can come in really handy!
+reverse' = foldl (flip (:)) []
+```
+
+Javascript:
+
+```javascript
+function reverse(list) {
+  return list.reduceRight((a, b) => [...a, b], []);
+}
+```
+
+**product**
+
+```haskell
+product' :: (Num a) => [a] -> a
+product' = foldl1 (*)
+```
+
+Javascript:
+
+```javascript
+function product(list) {
+  return list.reduce((a, b) => a * b);
+}
+```
+
+**filter**
+
+```haskell
+filter' :: (a -> Bool) -> [a] -> [a]
+filter' fn = foldr (\x a -> if fn x then x:a else a) []
+```
+
+Javascript:
+
+```javascript
+function filter(pred) {
+  return list => list.reduce((a, b) => (pred(b) ? [...a, b] : a), []);
+}
+```
+
+**head**
+
+```haskell
+head' :: [a] -> a
+-- `const` is a binary function that always returns its first argument
+-- const 1 2 ==
+head' = foldl1 const
+```
+
+Javascript:
+
+```javascript
+function head(list) {
+  return list.reduce((a, _) => a);
+}
+```
+
+**last**
+
+```haskell
+last' :: [a] -> a
+last' = foldr1 (flip const)
+```
+
+Javascript:
+
+```javascript
+function last(list) {
+  return list.reduceRight((a, _) => a);
+}
+```
+
+# Scanning
+
+'Scanning' refers to a way we can gain more information about how a fold is being executed. For instance, if we take the sum of a list of integers using `scanl`, we get back a list of the state of the sum for each step. (TODO better wording for this?) The scan functions in haskell correspond with the fold functions, and their general behavior. They are: `scanl`, `scanl1`, `scanr`, and `scanr1`.
+
+**Tracking the state of a `sum` fold with `scanl1`**
+
+We can see the current sum for each step in the folding process.
+
+```haskell
+sum' = scanl1 (+)
+
+sum' [1,2,3,4,5]   -- [1,3,6,10,15]
+```
+
+Javascript:
+
+Javascript does not have a `scan` function in its core library, but we can implement that functionality ourselves! Here is a quick and dirty implementation:
+
+```javascript
+function scanl(f) {
+  return list =>
+    list.reduce((a, b) => {
+      const prev = a[a.length - 1];
+      if (prev !== undefined) {
+        return [...a, f(prev, b)];
+      }
+      return [...a, b];
+    }, []);
+}
+
+scanl(add)([1, 2, 3, 4, 5]);
+```
+
+#### Infinite sequences
+
+**How many times can we accumulate natural squares before we reach `1000`?**
+
+```haskell
+sumOfSquares' = length
+              $ takeWhile (< 1000)
+              $ scanl1 (+)
+              $ map (^2) [1..]
+
+sumOfSquares'  -- 13
+
+-- If we remove the `length` call, we can see the results of `scanl`:
+-- [1,5,14,30,55,91,140,204,285,385,506,650,819]
+```
+
+Javascript:
+
+```javascript
+// yield an infinite sequence of natural numbers.
+function* ints() {
+  let i = 1;
+  while (true) {
+    yield i++;
+  }
+}
+
+// given an iterator, yield elements that satisfy a predicate until we reach one that doesn't.
+function takeWhile(p) {
+  return function*(iterator) {
+    for (let x of iterator) {
+      if (p(x)) {
+        yield x;
+      } else {
+        return;
+      }
+    }
+  };
+}
+
+// map an iterator
+function mapIt(f) {
+  return function*(it) {
+    for (let x of it) {
+      yield f(x);
+    }
+  };
+}
+
+// accumulate an iterator
+function scanIt(f, initial) {
+  return function*(it) {
+    let acc = initial;
+    for (let x of it) {
+      yield (acc = f(acc, x));
+    }
+  };
+}
+
+const add = (a, b) => a + b;
+
+// Get our iterator
+const squares = mapIt(x => Math.pow(x, 2))(ints());
+
+// accumulate the sum of squares until the the sum is greater than 1000.
+const scanOfSquares = takeWhile(x => x < 1000)(scanIt(add, 0)(squares));
+
+// spread all of the elements into an array so that we can count / inspect them.
+const theAnswer = [...scanOfSquares];
+
+theAnswer; // ​​​​​[ 1, 5, 14, 30, 55, 91, 140, 204, 285, 385, 506, 650, 819 ]​​​​​
+theAnswer.length; // 13
+```
+
 # Miscellaneous
 
 ## Syntax
@@ -932,7 +1560,3 @@ foo something = if something
                 then 1
                 else 2
 ```
-
-### Defining a function with backticks as an infix
-
-* TODO
